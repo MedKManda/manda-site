@@ -63,16 +63,14 @@ delete the `CNAME` file and remove the custom domain from the Pages settings.
 
 ## Contact form (Formspree)
 
-The form in `index.html` posts to `https://formspree.io/f/YOUR_FORM_ID`. To activate it:
+The form in `index.html` posts to a [Formspree](https://formspree.io) endpoint.
+`assets/js/main.js` submits it via `fetch` and shows an inline success/error message
+without leaving the page. The CI link checker excludes `formspree.io` URLs since it's a
+POST-only endpoint that isn't meaningful to GET/HEAD-check as a regular link.
 
-1. Create a free account at [formspree.io](https://formspree.io) and add a new form.
-2. Replace `YOUR_FORM_ID` in `index.html` (search for `formspree.io/f/`) with your real
-   form ID.
-3. `assets/js/main.js` submits the form via `fetch` and shows an inline success/error
-   message without leaving the page.
-
-Until the real ID is in place, the link checker step in CI is configured to skip that
-placeholder URL so it won't fail the build.
+To change which Formspree form it submits to, update the `action` attribute on
+`#contact-form` in `index.html` (search for `formspree.io/f/`) with the ID from your
+Formspree dashboard.
 
 ## Known issue carried over from the source export
 

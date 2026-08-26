@@ -37,7 +37,7 @@ jobs:
           args: >-
             --no-progress
             --exclude-mail
-            --exclude "formspree.io/f/YOUR_FORM_ID"
+            --exclude "formspree\.io"
             index.html
           fail: true
 
