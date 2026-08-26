@@ -36,7 +36,7 @@ jobs:
         with:
           args: >-
             --no-progress
-            --exclude-mail
+            --root-dir .
             --exclude "formspree\.io"
             index.html
           fail: true
