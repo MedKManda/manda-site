@@ -7,15 +7,13 @@ site since only the rendered output (not the Next.js source) was available.
 ## Structure
 
 ```
-index.html              Single-page site
-assets/css/styles.css   Compiled Tailwind CSS (from the original build)
-assets/js/main.js       Mobile nav toggle + contact form submission
-assets/img/             Team photos, board photos, logo (resized/compressed)
-favicon.png             Site favicon
-CNAME                   Custom domain for GitHub Pages
-.nojekyll                Disables Jekyll processing on GitHub Pages
-.htmlvalidate.json       Config for the HTML lint step in CI
-.github/workflows/deploy.yml   CI/CD: validate, then deploy to GitHub Pages
+index.html                     Single-page site
+assets/css/styles.css          Compiled Tailwind CSS (from the original build)
+assets/js/main.js               Mobile nav toggle + contact form submission
+assets/img/                    Team photos, board photos, logo (resized/compressed)
+favicon.png                    Site favicon
+.htmlvalidate.json             Config for the HTML lint step in CI
+.github/workflows/validate.yml CI: HTML lint + broken-link check on every push/PR
 ```
 
 ## Local preview
@@ -30,36 +28,47 @@ python3 -m http.server 8000
 
 Then open the printed URL in a browser.
 
-## CI/CD pipeline (GitHub Actions)
+## CI (GitHub Actions)
 
-`.github/workflows/deploy.yml` runs on every push/PR to `main`:
+`.github/workflows/validate.yml` runs on every push/PR to `main` and lints `index.html`
+with [html-validate](https://html-validate.org/) and checks for broken links with
+[lychee](https://github.com/lycheeverse/lychee-action). It's a safety check only —
+it does not deploy anything.
 
-1. **validate** — lints `index.html` with [html-validate](https://html-validate.org/) and
-   checks for broken links with [lychee](https://github.com/lycheeverse/lychee-action).
-2. **build** — packages the site as a Pages artifact (only after validation passes).
-3. **deploy** — publishes to GitHub Pages (only on push to `main`, not on PRs).
+## Deployment (Coolify, self-hosted)
 
-### One-time repo setup
+Production hosting is **Coolify**, self-hosted on a Hetzner server, reached through a
+**Cloudflare Tunnel** (Zero Trust) rather than a public IP — the server has no exposed
+inbound ports.
 
-1. Push this repo to GitHub.
-2. In the repo settings, go to **Settings → Pages** and set **Source** to
-   **GitHub Actions**.
-3. Push to `main` (or run the workflow manually from the Actions tab) to trigger the
-   first deploy.
+### One-time setup
 
-### Custom domain (mandanetwork.ai)
+1. In Coolify, create a new **Application** sourced from this GitHub repo
+   (`MedKManda/manda-site`, branch `main`). Use the **Static** build pack with the
+   publish directory set to `.` (the repo root — `index.html` lives there directly, no
+   build step needed).
+2. Connect Coolify to the repo (deploy key or GitHub App, whichever Coolify's "new
+   resource" flow prompts for) and enable **auto-deploy on push** — Coolify manages its
+   own webhook on the GitHub repo for this, no manual step needed on the GitHub side.
+3. In Coolify's app settings, add `mandanetwork.ai` (and `www.mandanetwork.ai` if you
+   want both) as the app's domain.
+4. In **Cloudflare Zero Trust → Networks → Tunnels → (the tunnel this Coolify server
+   already uses)**, add a **Public Hostname** route for each:
+   - Domain: `mandanetwork.ai` (leave the subdomain field blank for the apex)
+   - Service: the internal address Coolify's app tab shows for this resource
+     (e.g. `http://<container>:<port>`)
+   - Repeat with subdomain `www` for `www.mandanetwork.ai`, same service.
 
-A `CNAME` file pointing at `mandanetwork.ai` is already included. To finish wiring up
-DNS with your registrar:
+   Adding a Public Hostname route in the Tunnel config creates/updates the matching
+   Cloudflare DNS record automatically (a proxied `CNAME` to
+   `<tunnel-id>.cfargotunnel.com`) — no manual DNS edit needed for these two hostnames.
+   If a conflicting record already exists on `www` or the apex from a previous host,
+   remove it first so Cloudflare can create the tunnel-routed one.
+5. Leave the domain's `MX`/`TXT` mail records (Google Workspace) untouched — they're
+   unrelated to this and unaffected either way.
 
-- Apex domain (`mandanetwork.ai`): add four `A` records pointing to GitHub Pages' IPs:
-  `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`.
-- `www.mandanetwork.ai`: add a `CNAME` record pointing to `<your-github-username>.github.io`.
-- In **Settings → Pages**, confirm the custom domain and enable **Enforce HTTPS** once
-  DNS has propagated (GitHub provisions the certificate automatically).
-
-If you'd rather deploy to the default `https://<username>.github.io/<repo>/` URL instead,
-delete the `CNAME` file and remove the custom domain from the Pages settings.
+GitHub Pages is not used for production. (It's fine to leave a repo's Pages site
+disabled/unconfigured; nothing here depends on it.)
 
 ## Contact form (Formspree)
 
